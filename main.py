@@ -10,7 +10,8 @@ import hashlib as hl
 from collections import OrderedDict
 
 # Import two functions from our hash_util.py file. Omit the ".py" in the import
-from hash_util import hash_string_256, hash_block
+# from hash_util import hash_string_256, hash_block
+import hashlib
 
 #--------------------------------------------
 """
@@ -177,7 +178,7 @@ def valid_proof(transactions, last_hash, proof):
     guess = (str(transactions) + str(last_hash) + str(proof)).encode()
     # Hash the string
     # IMPORTANT: This is NOT the same hash as will be stored in the previous_hash. It's a not a block's hash. It's only used for the proof-of-work algorithm.
-    guess_hash = hash_string_256(guess)
+    guess_hash = hashlib.sha256(guess).hexdigest()
     print("hash of proof: ", guess_hash)
     # Only a hash (which is based on the above inputs) which starts with two 0s is treated as valid
     # This condition is of course defined by you. You could also require 10 leading 0s - this would take significantly longer (and this allows you to control the speed at which new blocks can be added)
@@ -187,7 +188,7 @@ def valid_proof(transactions, last_hash, proof):
 def proof_of_work():
     """Generate a proof of work for the open transactions, the hash of the previous block and a random number (which is guessed until it fits)."""
     last_block = blockchain[-1]
-    last_hash = hash_block(last_block)
+    last_hash = hashlib.sha256(last_block).hexdigest()
     proof = 0
     # Try different PoW numbers and return the first valid one
     while not valid_proof(open_transactions, last_hash, proof):
@@ -526,7 +527,7 @@ def mine_block():
     last_block = blockchain[-1]
     #print(last_block)
     # Hash the last block (=> to be able to compare it to the stored hash value)
-    hashed_block = hash_block(last_block)
+    hashed_block = hashlib.sha256(last_block).hexdigest()
     proof = proof_of_work()
     # Miners should be rewarded, so let's create a reward transaction
     # reward_transaction = {
@@ -581,7 +582,7 @@ def verify_chain():
     for (index, block) in enumerate(blockchain):
         if index == 0:
             continue
-        if block['previous_hash'] != hash_block(blockchain[index - 1]):
+        if block['previous_hash'] != hashlib.sha256(blockchain[index - 1]).hexdigest():
             print('invalid previous hash at index: ', index)
             return False
         if not valid_proof(block['transactions'][:-1], block['previous_hash'], block['proof']):
