@@ -187,8 +187,17 @@ def valid_proof(transactions, last_hash, proof):
 
 def proof_of_work():
     """Generate a proof of work for the open transactions, the hash of the previous block and a random number (which is guessed until it fits)."""
+    ## ORIGINAL
+    # last_block = blockchain[-1]
+    # last_hash = hashlib.sha256(last_block).hexdigest()
+    ##
+
+    ## AVI
     last_block = blockchain[-1]
-    last_hash = hashlib.sha256(last_block).hexdigest()
+    # hashed_block = hashlib.sha256(last_block).hexdigest()
+    encoded_block = json.dumps(last_block, sort_keys=True).encode()
+    last_hash = hashlib.sha256(encoded_block).hexdigest()
+    ##
     proof = 0
     # Try different PoW numbers and return the first valid one
     while not valid_proof(open_transactions, last_hash, proof):
@@ -322,6 +331,12 @@ def update(index, owner_details):
 
 
 #-------------------------
+# def register_user():
+#     name =  input('Enter name of user\n')
+#     id =    input('Enter ID of user\n')
+#     properties = []
+#
+#     past_properties =
 
 #New function of add_tx
 
@@ -527,7 +542,10 @@ def mine_block():
     last_block = blockchain[-1]
     #print(last_block)
     # Hash the last block (=> to be able to compare it to the stored hash value)
-    hashed_block = hashlib.sha256(last_block).hexdigest()
+
+    #hashed_block = hashlib.sha256(last_block).hexdigest()
+    encoded_block = json.dumps(last_block, sort_keys=True).encode()
+    hashed_block = hashlib.sha256(encoded_block).hexdigest()
     proof = proof_of_work()
     # Miners should be rewarded, so let's create a reward transaction
     # reward_transaction = {
@@ -582,7 +600,15 @@ def verify_chain():
     for (index, block) in enumerate(blockchain):
         if index == 0:
             continue
-        if block['previous_hash'] != hashlib.sha256(blockchain[index - 1]).hexdigest():
+        # ORIGINAL
+        if block['previous_hash'] != hashlib.sha256(json.dumps(blockchain[index-1], sort_keys=True).encode()).hexdigest():
+        # ##
+        # # AVI
+        # last_block = blockchain[-1]
+        # # hashed_block = hashlib.sha256(last_block).hexdigest()
+        # encoded_block = json.dumps(last_block, sort_keys=True).encode()
+        # last_hash = hashlib.sha256(encoded_block).hexdigest()
+        # ##
             print('invalid previous hash at index: ', index)
             return False
         if not valid_proof(block['transactions'][:-1], block['previous_hash'], block['proof']):
