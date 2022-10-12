@@ -616,102 +616,81 @@ def verify_chain():
             print('Proof of work is invalid')
             return False
     return True
-#print(blockchain[1]['transactions'][-2])   #we can use tansactions[:-2] if we don't wanna include the mining reward transaction
+
+
+# print(blockchain[1]['transactions'][-2])   #we can use tansactions[:-2] if we don't wanna include the mining reward transaction
+
 def verify_transactions():
     """Verifies all open transactions."""
     return all([verify_transaction(tx) for tx in open_transactions])
 
 
-waiting_for_input = True
+def console():
+    print('\n+-----------------------------+')
+    print('1:Register your property')  # register property on your name and save it into blockchain (this is a transaction)
+    print('2:Transfer your property')
+    print('3: Mine a new block')
+    print('4: Check Transaction Validity')  # change to blockchain validity
+    print('5: Manipulate the chain')
+    print('6: Display Unhandled Transactions')  # transactions those are open (yet to mine)
+    print('7: Display Blockchain Blocks')
+    print('8: Display Participants')
+    print('9: Display User Details')  # displays user and his/her properties' data.
+    print('10: Quit')
 
-# A while loop for the user input interface
-# It's a loop that exits once waiting_for_input becomes False or when break is called
-while waiting_for_input:
-    print('Please choose')
-    #print('1: Add a new transaction value')
-    #--------------------------------------------
-    print('11:Register your property')  #register property on your name and save it into blockchain (this is a transaction)
-    print('12:Transfer your property')
-    print('13: to print the unhandled transactions')
-    print('2: Mine a new block')
-    print('3: Output the blockchain blocks')
-    print('4: Output participants')
-    print('5: Check transaction validity')
-    print('h: Manipulate the chain')
-    #--------------------------------------------
-    print('p: Print user details')
-    print('q: Quit')
-    user_choice = get_user_choice()
-    """
-    if user_choice == '1':
-        tx_data = get_transaction_value()
-        recipient, amount = tx_data
-        # Add the transaction amount to the blockchain
-        if add_transaction(recipient, amount=amount):
-            print('Added transaction!')
-        else:
-            print('Transaction failed!')
-        print("open_transactions", open_transactions)
-    """
-    #-----------------------------------
-    if user_choice == '11':    
-        if registering_property():
-            print('Property registered successfully')
-        else:
-            print('Registering failed')
-        ##print("open_transactions:\n", open_transactions)
-    elif user_choice == '12':    
-        if transfer_property():
-            print('Property transfered successfully')
-        else:
-            print('transfering failed')
-        ##print("open_transactions", open_transactions)
-    elif user_choice == '13':
-        print("open_transactions", open_transactions)
-    
-    #-----------------------------------
 
-    elif user_choice == '2':
-        if mine_block():
-            open_transactions = []
-            save_data()
-    elif user_choice == '3':
-        print_blockchain_elements()
-    elif user_choice == '4':
-        print(participants)
-    elif user_choice == '5':
-        if verify_transactions():
-            print('All transactions are valid')
+if __name__ == '__main__':
+    while True:
+        console()
+        user_choice = input('Enter your choice: ')
+        if user_choice == '1':
+            if registering_property():
+                print('Property registered successfully')
+            else:
+                print('Registering failed')
+        elif user_choice == '2':
+            if transfer_property():
+                print('Property transferred successfully')
+            else:
+                print('Property transfer failure')
+        elif user_choice == '3':
+            if mine_block():
+                open_transactions = []
+                save_data()
+        elif user_choice == '4':
+            if verify_transactions():  # change to verify_chain()
+                print('All transactions are valid')
+            else:
+                print('There are invalid transactions')
+        elif user_choice == '5':
+            # Make sure that you don't try to "hack" the blockchain if it's empty
+            if len(blockchain) >= 1:
+                # simply change the block at index '0'
+                blockchain[0] = {
+                    'previous_hash': '',
+                    'index': 0,
+                    'transactions': [{'sender': 'Chris', 'recipient': 'Max', 'amount': 100.0}]
+                }
+        elif user_choice == '6':
+            print("open_transactions", open_transactions)
+        elif user_choice == '7':
+            print_blockchain_elements()
+        elif user_choice == '8':
+            print(participants)
+        elif user_choice == '9':
+            print_user_details()
+        elif user_choice == '10':
+            print('Exiting...')
+            break
         else:
-            print('There are invalid transactions')
-    elif user_choice == 'h':
-        # Make sure that you don't try to "hack" the blockchain if it's empty
-        if len(blockchain) >= 1:
-            blockchain[0] = {
-                'previous_hash': '',
-                'index': 0,
-                'transactions': [{'sender': 'Chris', 'recipient': 'Max', 'amount': 100.0}]
-            }
-    elif user_choice == 'p':
+            print('Invalid input... Try again!')
+
+        # always make sure that the blockchain is valid
+        if not verify_chain():
+            print_blockchain_elements()
+            print('Invalid blockchain!')
+            # Break out of the loop
+            break
+        # print('Balance of {}: {:6.2f}'.format('Max', get_balance('Max')))
+        print('\nProperty records of user: ', owner_details['name'])
         print_user_details()
-    elif user_choice == 'q':
-        # This will lead to the loop to exist because it's running condition becomes False
-        waiting_for_input = False
-    else:
-        print('Input was invalid, please pick a value from the list!')
-    if not verify_chain():
-        print_blockchain_elements()
-        print('Invalid blockchain!')
-        # Break out of the loop
-        break
-    ##print('Balance of {}: {:6.2f}'.format('Max', get_balance('Max')))
-    print('\nProperty records of user: ', owner_details['name'])
-    print_user_details()
-    
-else:
-    print('User left!')
-
-
-print('Done!')
-
-
