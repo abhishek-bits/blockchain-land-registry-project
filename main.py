@@ -1,93 +1,103 @@
-3# -*- coding: utf-8 -*-
-"""
-Created on Sat May  9 02:49:38 2020
-
-@author: BILAL khan
-"""
+import hashlib
 import json
 from functools import reduce
-import hashlib as hl
 from collections import OrderedDict
 
-# Import two functions from our hash_util.py file. Omit the ".py" in the import
-# from hash_util import hash_string_256, hash_block
-import hashlib
-
-#--------------------------------------------
-"""
-properties = []
-
-properties.append({'property_address' : 'Flat no : 3, Plot no : 7, Street no : 32, Tauheed commercial Area', 'property_owner' : 'Faran', 'property_owner_id' : 42310236846167})
-properties.append('none')
-"""
 
 # The reward we give to miners (for creating a new block)
 MINING_REWARD = 10
 
-# Our starting block for the blockchain
-genesis_block = {
-    'previous_hash': '',
-    'index': 0,
-    'transactions': [],
-    'proof': 100
-}
-# Initializing our (empty) blockchain list
-blockchain = [genesis_block]
-# Unhandled transactions
-#--------------------------------------------
-#open_transactions = []
-# We are the owner of this blockchain node, hence this is our identifier (e.g. for sending coins)
-owner = 'Max'
-# Registered participants: Ourself + other people sending/ receiving coins
-#--------------------------------------------
-#participants = {'Max'}
+# list of all blocks in the blockchain
+blockchain = []
 
-#--------------------------------------------
+# list of all properties (both sold and unsold)
+properties = []
 
-properties = [] #govt database
-
+# list of all participants (both buyer and seller)
 participants = []
-participant = OrderedDict(
-    [ ('name', 'hamza'), ('id', 12345), ('properties', []), ('past_properties', []) ])
-participants.append(participant)
 
+# Unhandled transactions or transactions those are yet to mine
+un_mined_transactions = []
+
+# Government Database should contain the
+# list of both properties and participants
 govt_database = OrderedDict(
-            [('name', 'Govt'),
-            ('id', 0000),
-            ('properties', properties),
-            ('participants', participants)
-            ]
-        )
-
-property1 = OrderedDict(
-        [('property_address', 'Flat no : 3, Plot no : 7, Street no : 32, Tauheed commercial Area'), ('property_owner', 'Faran'), ('property_owner_id', 42310236846167)])
-
-properties.append(property1)
-
-properties.append(
-        OrderedDict(
-        [('property_address', 'Flat no : 6, Plot no : 3, Street no : 20, Tauheed commercial Area'), ('property_owner', 'Bilal'), ('property_owner_id', 42310236846168)
-        ])
-)
-
-open_transactions = []
-
-owner_details = OrderedDict(   #change name to owner_database
-    [('name', 'Bilal'), ('id', 42310236846168), ('properties', []), ('past_properties', [])
+    [
+        ('name', 'Govt'),
+        ('id', 0000),
+        ('properties', properties),
+        ('participants', participants)
     ]
 )
+
+# Owner is the one who buys and sells the property
+owner_database = OrderedDict(
+    [
+        ('name', 'Bilal'),
+        ('id', 42310236846168),
+        ('properties', []),
+        ('past_properties', [])
+    ]
+)
+
+
+def init_blockchain():
+    """initializes the blockchain list with the 'genesis' block."""
+    global blockchain
+    genesis_block = {
+        'previous_hash': '',
+        'index': 0,
+        'transactions': [],
+        'proof': 100
+    }
+    blockchain.append(genesis_block)
+
+
+def init_participants():
+    """initializes the participants lists with some default participants."""
+    global participants
+    participant = OrderedDict(
+        [
+            ('name', 'hamza'),
+            ('id', 12345),
+            ('properties', []),
+            ('past_properties', [])
+        ]
+    )
+    participants.append(participant)
+
+
+def init_properties():
+    """initializes the properties list with some default properties."""
+    global properties
+    property1 = OrderedDict(
+        [
+            ('property_address', 'Flat no : 3, Plot no : 7, Street no : 32, Tauheed commercial Area'),
+            ('property_owner', 'Faran'),
+            ('property_owner_id', 42310236846167)
+        ]
+    )
+    property2 = OrderedDict(
+        [
+            ('property_address', 'Flat no : 6, Plot no : 3, Street no : 20, Tauheed commercial Area'),
+            ('property_owner', 'Bilal'),
+            ('property_owner_id', 42310236846168)
+        ]
+    )
+    properties.append(property1)
+    properties.append(property2)
 
 
 def load_data():
     """Initialize blockchain + open transactions data from a file."""
     global blockchain
-    global open_transactions
+    global un_mined_transactions
     try:
         with open('blockchain.txt', mode='r') as f:
             # file_content = pickle.loads(f.read())
             file_content = f.readlines()
             # blockchain = file_content['chain']
-            # open_transactions = file_content['ot']
+            # un_handled_transactions = file_content['ot']
             ##print('file_content: \n',file_content)
             if len(file_content) > 0:
                 blockchain = json.loads(file_content[0][:-1])
@@ -135,19 +145,17 @@ def load_data():
                 updated_blockchain.append(updated_block)
             blockchain = updated_blockchain
             if len(file_content) > 0:
-                open_transactions = json.loads(file_content[1])
+                un_mined_transactions = json.loads(file_content[1])
             # We need to convert  the loaded data because Transactions should use OrderedDict
             updated_transactions = []
-            for tx in open_transactions:
+            for tx in un_mined_transactions:
                 updated_transaction = OrderedDict(
                     [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount', tx['amount']), ('property_address', tx['property_address'])])
                 updated_transactions.append(updated_transaction)
             #print("updated tx", updated_transactions)
-            open_transactions = updated_transactions
+            un_mined_transactions = updated_transactions
     except IOError:
         print("File not found")
-
-load_data()
 
 
 def save_data():
@@ -155,10 +163,10 @@ def save_data():
     with open('blockchain.txt', mode='w') as f:
         f.write(json.dumps(blockchain))
         f.write('\n')
-        f.write(json.dumps(open_transactions))
+        f.write(json.dumps(un_mined_transactions))
         # save_data = {
         #     'chain': blockchain,
-        #     'ot': open_transactions
+        #     'ot': un_mined_transactions
         # }
         # f.write(pickle.dumps(save_data))
         #print('file saved')
@@ -186,24 +194,20 @@ def valid_proof(transactions, last_hash, proof):
 
 
 def proof_of_work():
-    """Generate a proof of work for the open transactions, the hash of the previous block and a random number (which is guessed until it fits)."""
-    ## ORIGINAL
-    # last_block = blockchain[-1]
-    # last_hash = hashlib.sha256(last_block).hexdigest()
-    ##
-
-    ## AVI
+    """
+    Generate a proof of work for the open transactions,
+    the hash of the previous block and a random number
+    (which is guessed until it fits).
+    """
     last_block = blockchain[-1]
-    # hashed_block = hashlib.sha256(last_block).hexdigest()
     encoded_block = json.dumps(last_block, sort_keys=True).encode()
     last_hash = hashlib.sha256(encoded_block).hexdigest()
-    ##
     proof = 0
     # Try different PoW numbers and return the first valid one
-    while not valid_proof(open_transactions, last_hash, proof):
+    while not valid_proof(un_mined_transactions, last_hash, proof):
         proof += 1
-    #print(open_transactions)
-    print("proof ", proof)
+    # print(un_mined_transactions)
+    print("Proof of Work: ", proof)
     return proof
 
 
@@ -220,7 +224,7 @@ def get_balance(participant):
     # Fetch a list of all sent coin amounts for the given person (empty lists are returned if the person was NOT the sender)
     # This fetches sent amounts of open transactions (to avoid double spending)
     open_tx_sender = [tx['amount']
-                      for tx in open_transactions if tx['sender'] == participant]
+                      for tx in un_mined_transactions if tx['sender'] == participant]
     tx_sender.append(open_tx_sender)
     ##print("tx_sender", tx_sender)
     amount_sent = reduce(lambda tx_sum, tx_amt: tx_sum + sum(tx_amt)
@@ -304,31 +308,28 @@ def verify_property_owner(user_details, property_details):
 
 
 def verify_transaction(transaction):
+    # should add verification code here...
     return True
 
 
-def update(index, owner_details):
+def update(index, owner_database):
     #performing a deep copy manually
     #watch video of deep copy and then correct it
     
     past_properties = OrderedDict(
-        [('property_address', owner_details['properties'][index]['property_address']),
-        ('property_next_owner_name', owner_details['properties'][index]['property_owner']),
-        ('property_next_owner_id', owner_details['properties'][index]['property_owner_id'])
+        [('property_address', owner_database['properties'][index]['property_address']),
+        ('property_next_owner_name', owner_database['properties'][index]['property_owner']),
+        ('property_next_owner_id', owner_database['properties'][index]['property_owner_id'])
         ]
     )
     
-    owner_details['past_properties'].append(past_properties)
+    owner_database['past_properties'].append(past_properties)
 
-    owner_details['properties'][index] = 0
-    #owner_details['properties'][index].delete()
-    owner_details['properties'].pop(index)
+    owner_database['properties'][index] = 0
+    #owner_database['properties'][index].delete()
+    owner_database['properties'].pop(index)
     print('\n sender updated successfully\n')
-    print('sender_details: ',owner_details)
-
-
-
-
+    print('sender_details: ',owner_database)
 
 #-------------------------
 # def register_user():
@@ -338,8 +339,8 @@ def update(index, owner_details):
 #
 #     past_properties =
 
-#New function of add_tx
 
+# New function of add_tx
 def add_transaction(recipient, sender, property_details, amount=1.0, user_choice= -1): #For register property
     """ Append a new value as well as the last blockchain value to the blockchain.
 
@@ -371,7 +372,7 @@ def add_transaction(recipient, sender, property_details, amount=1.0, user_choice
         [('sender', sender_name_and_id), ('recipient', recipient_name_and_id), ('amount', amount), ('property_address', property_details['property_address'])])     #this should be handled see prob1   #property_updated_details = property_details
 
     if verify_transaction(transaction):
-        open_transactions.append(transaction)
+        un_mined_transactions.append(transaction)
         #participants.append(sender['name'])
         #participants.append(recipient['name'])
         
@@ -383,7 +384,7 @@ def add_transaction(recipient, sender, property_details, amount=1.0, user_choice
             print('\n\n transfer_property user_choice', user_choice)
             #use any one method
             #sender['properties']['user_choice'].delete()
-            update(user_choice, sender) #index of the property inside owner_details
+            update(user_choice, sender) #index of the property inside owner_database
             """sender['properties']['user_choice'].update(new_owner=recipient_name_and_id)
             """
         #else:
@@ -394,37 +395,14 @@ def add_transaction(recipient, sender, property_details, amount=1.0, user_choice
         #    print(i, '=', properties[i]['property_address'])
 
         
-        ##print('\n\n open_transactions = ', open_transactions)
+        ##print('\n\n un_mined_transactions = ', un_mined_transactions)
         save_data()
         return True
         
     return False
 
-#--------------------------------
-"""
-properties.append({'property_address' : 'Flat no : 3, Plot no : 7, Street no : 32, Tauheed commercial Area', 'property_owner' : 'Faran', 'property_owner_id' : 42310236846167})
-properties.append({'property_address' : 'Flat no : 6, Plot no : 3, Street no : 31, Tauheed commercial Area', 'property_owner' : 'Bilal', 'property_owner_id' : 42310236846168})
 
-owner_details = {
-    'name' : 'Bilal',
-    'id' : 42310236846168
-
-
-def get_user_choice_int():
-    user_input = int(input('input your choice: '))
-    return user_input
-
-  
-def verify_property_owner(user_details, property_details):
-    if property_details['property_owner'] == user_details['name'] and property_details['property_owner_id'] == user_details['id']:
-        print('property verified')
-        return True
-    else:
-        print('property owner invalid')
-        return False
-"""
-
-
+# register property on your name and save it into blockchain (this is a transaction)
 def registering_property():
 
     for i in range(len(govt_database['properties'])):
@@ -443,13 +421,13 @@ def registering_property():
         
         ##print(property_details.keys())
         
-        recipient_details = owner_details
+        recipient_details = owner_database
         sender_details = OrderedDict(
             [('name', govt_database['name']),
             ('id', govt_database['id'])
             ]
         )
-        if verify_property_owner(owner_details, property_details):
+        if verify_property_owner(owner_database, property_details):
             print('property verified successfully ')
             if add_transaction(recipient_details, sender_details, property_details, amount=0):
                 ##print('property registered successfully: inside func')
@@ -463,27 +441,27 @@ def registering_property():
 
 def transfer_property():
 
-    ##print('\nowner_details ', owner_details.keys())
+    ##print('\nowner_database ', owner_database.keys())
     print('\n')
     i = -1
-    if len(owner_details['properties']) > 0:
+    if len(owner_database['properties']) > 0:
         print('The properties you own are:\n')
-        for i in range(len(owner_details['properties'])):
-            print('property number:',i, '=', owner_details['properties'][i]['property_address'], '\n')
-            #print(i, '=', owner_details['properties'][i]['property_address'])  # this code runs fine
+        for i in range(len(owner_database['properties'])):
+            print('property number:',i, '=', owner_database['properties'][i]['property_address'], '\n')
+            #print(i, '=', owner_database['properties'][i]['property_address'])  # this code runs fine
     if i==-1:
         print('You dont have any property so you cannot transfer, have a nice day sir ')
     else:
         print('enter the number of property you want to choose')
         user_choice = get_user_choice_int()
-        print('len of list owner_details[properties] = ', len(owner_details['properties']))
+        print('len of list owner_database[properties] = ', len(owner_database['properties']))
         #Add a while loop which will prompt values again and again if user inputs wrong value, press -1 to exit
-        if user_choice >= 0 and user_choice < len(owner_details['properties']):
-            print('address selected is: ', owner_details['properties'][user_choice])    #This is not needed
+        if user_choice >= 0 and user_choice < len(owner_database['properties']):
+            print('address selected is: ', owner_database['properties'][user_choice])    #This is not needed
                 
             #Verifying the registered property
             
-            property_details = owner_details['properties'][user_choice]  # ['property_address'] 
+            property_details = owner_database['properties'][user_choice]  # ['property_address'] 
             
             ##print('\nproperty_details inside transfer_property func ',property_details) #.keys()
             
@@ -510,9 +488,9 @@ def transfer_property():
                 
                 amount=100 #amount of property sold at
                 amount = get_property_price()
-                #if verify_property_owner_2(property_details, govt_database):  (owner_details, property_details)
+                #if verify_property_owner_2(property_details, govt_database):  (owner_database, property_details)
                 #in this new function we gotta search that property in govt_database and then pass property_details = govt_database['properties'][searched] in verify_property_owner() function
-                if add_transaction(recipient_details, owner_details, property_details, amount, user_choice):
+                if add_transaction(recipient_details, owner_database, property_details, amount, user_choice):
                     print('property transfered successfully ')
                     return True
                 else:
@@ -528,13 +506,11 @@ def transfer_property():
 
 
 def print_user_details():
-    print('user name: ', owner_details['name'])
-    print('user id: ', owner_details['id'])
-    print('user properties: ', owner_details['properties'])
-    print('user past properties: ', owner_details['past_properties'])
+    print('user name: ', owner_database['name'])
+    print('user id: ', owner_database['id'])
+    print('user properties: ', owner_database['properties'])
+    print('user past properties: ', owner_database['past_properties'])
 
-
-#-------------------------------------------------
 
 def mine_block():
     """Create a new block and add open transactions to it."""
@@ -547,6 +523,7 @@ def mine_block():
     encoded_block = json.dumps(last_block, sort_keys=True).encode()
     hashed_block = hashlib.sha256(encoded_block).hexdigest()
     proof = proof_of_work()
+    owner = 'Max'
     # Miners should be rewarded, so let's create a reward transaction
     # reward_transaction = {
     #     'sender': 'MINING',
@@ -555,9 +532,9 @@ def mine_block():
     # }
     reward_transaction = OrderedDict(
         [('sender', 'MINING'), ('recipient', owner), ('amount', MINING_REWARD)])
-    # Copy transaction instead of manipulating the original open_transactions list
+    # Copy transaction instead of manipulating the original un_mined_transactions list
     # This ensures that if for some reason the mining should fail, we don't have the reward transaction stored in the open transactions
-    copied_transactions = open_transactions[:]
+    copied_transactions = un_mined_transactions[:]
     copied_transactions.append(reward_transaction)
     block = {
         'previous_hash': hashed_block,
@@ -577,16 +554,10 @@ def get_transaction_value():
     return tx_recipient, tx_amount
 
 
-def get_user_choice():
-    """Prompts the user for its choice and return it."""
-    user_input = input('Your choice: ')
-    return user_input
-
-
 def print_blockchain_elements():
     """ Output all blocks of the blockchain. """
     # Output the blockchain list to the console
-    i=0
+    i = 0
     for block in blockchain:
         print('Outputting Block ', i)
         print(block)
@@ -622,24 +593,32 @@ def verify_chain():
 
 def verify_transactions():
     """Verifies all open transactions."""
-    return all([verify_transaction(tx) for tx in open_transactions])
+    return all([verify_transaction(tx) for tx in un_mined_transactions])
 
 
 def console():
     print('\n+-----------------------------+')
-    print('1:Register your property')  # register property on your name and save it into blockchain (this is a transaction)
-    print('2:Transfer your property')
+    print('1: Register your property')
+    print('2: Sell your property')  # transfers property to government
     print('3: Mine a new block')
-    print('4: Check Transaction Validity')  # change to blockchain validity
-    print('5: Manipulate the chain')
-    print('6: Display Unhandled Transactions')  # transactions those are open (yet to mine)
-    print('7: Display Blockchain Blocks')
-    print('8: Display Participants')
-    print('9: Display User Details')  # displays user and his/her properties' data.
-    print('10: Quit')
+    print('4: Check Transaction Validity')
+    print('5: Check Blockchain Validity')
+    print('6: Manipulate the chain')
+    print('7: Display Un-mined Transactions')  # transactions those are open (yet to mine)
+    print('8: Display Blockchain Blocks')
+    print('9: Display Participants')
+    print('10: Display User Details')  # displays user and his/her properties' data.
+    print('11: Quit')
+
+
+def init():
+    init_blockchain()
+    init_participants()
+    init_properties()
 
 
 if __name__ == '__main__':
+    init()
     while True:
         console()
         user_choice = input('Enter your choice: ')
@@ -655,14 +634,19 @@ if __name__ == '__main__':
                 print('Property transfer failure')
         elif user_choice == '3':
             if mine_block():
-                open_transactions = []
+                un_mined_transactions = []
                 save_data()
         elif user_choice == '4':
-            if verify_transactions():  # change to verify_chain()
+            if verify_transactions():
                 print('All transactions are valid')
             else:
                 print('There are invalid transactions')
         elif user_choice == '5':
+            if verify_chain():
+                print('Blockchain is VALID!')
+            else:
+                print('Invalid Blockchain')
+        elif user_choice == '6':
             # Make sure that you don't try to "hack" the blockchain if it's empty
             if len(blockchain) >= 1:
                 # simply change the block at index '0'
@@ -671,26 +655,19 @@ if __name__ == '__main__':
                     'index': 0,
                     'transactions': [{'sender': 'Chris', 'recipient': 'Max', 'amount': 100.0}]
                 }
-        elif user_choice == '6':
-            print("open_transactions", open_transactions)
         elif user_choice == '7':
-            print_blockchain_elements()
+            print("Un-mined Transactions: ", un_mined_transactions)
         elif user_choice == '8':
-            print(participants)
+            print_blockchain_elements()
         elif user_choice == '9':
-            print_user_details()
+            print(participants)
         elif user_choice == '10':
+            print('\nProperty records of user: ', owner_database['name'])
+            print_user_details()
+        elif user_choice == '11':
             print('Exiting...')
             break
         else:
             print('Invalid input... Try again!')
 
-        # always make sure that the blockchain is valid
-        if not verify_chain():
-            print_blockchain_elements()
-            print('Invalid blockchain!')
-            # Break out of the loop
-            break
         # print('Balance of {}: {:6.2f}'.format('Max', get_balance('Max')))
-        print('\nProperty records of user: ', owner_details['name'])
-        print_user_details()
