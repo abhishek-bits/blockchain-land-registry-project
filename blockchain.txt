@@ -1,0 +1,2 @@
+[{"previous_hash": "", "index": 0, "transactions": [], "proof": 100}]
+[{"sender": {"name": "Govt", "id": 0}, "recipient": {"name": "Abhishek", "id": 70}, "amount": 0, "property_address": "Dehradun"}, {"sender": {"name": "Abhishek", "id": 70}, "recipient": {"name": "Susheel", "id": 109}, "amount": 50, "property_address": "Dehradun"}]
