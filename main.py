@@ -4,8 +4,9 @@ from functools import reduce
 from collections import OrderedDict
 from typing import List
 
-# **********************************************
-#           MERKLE TREE
+# ***************************************************************
+#                           MERKLE TREE
+# Ref: https://www.geeksforgeeks.org/introduction-to-merkle-tree/
 
 class Node:
     def __init__(self, left, right, value: str, content, is_copied=False) -> None:
