@@ -2,7 +2,102 @@ import hashlib
 import json
 from functools import reduce
 from collections import OrderedDict
+from typing import List
 
+# **********************************************
+#           MERKLE TREE
+
+class Node:
+    def __init__(self, left, right, value: str, content, is_copied=False) -> None:
+        self.left: Node = left
+        self.right: Node = right
+        self.value = value
+        self.content = content
+        self.is_copied = is_copied
+
+    @staticmethod
+    def hash(val: str) -> str:
+        return hashlib.sha256(val.encode('utf-8')).hexdigest()
+
+    def __str__(self):
+        return (str(self.value))
+
+    def copy(self):
+        """
+        class copy function
+        """
+        return Node(self.left, self.right, self.value, self.content, True)
+
+
+class MerkleTree:
+    def __init__(self, values: List[str]) -> None:
+        self.__buildTree(values)
+
+    def __buildTree(self, values: List[str]) -> None:
+
+        leaves: List[Node] = [Node(None, None, Node.hash(e), e) for e in values]
+        if len(leaves) % 2 == 1:
+            leaves.append(leaves[-1].copy())  # duplicate last elem if odd number of elements
+        self.root: Node = self.__buildTreeRec(leaves)
+
+    def __buildTreeRec(self, nodes: List[Node]) -> Node:
+        if len(nodes) % 2 == 1:
+            nodes.append(nodes[-1].copy())  # duplicate last elem if odd number of elements
+        half: int = len(nodes) // 2
+
+        if len(nodes) == 2:
+            return Node(nodes[0], nodes[1], Node.hash(nodes[0].value + nodes[1].value),
+                        nodes[0].content + "+" + nodes[1].content)
+
+        left: Node = self.__buildTreeRec(nodes[:half])
+        right: Node = self.__buildTreeRec(nodes[half:])
+        value: str = Node.hash(left.value + right.value)
+        content: str = f'{left.content}+{right.content}'
+        return Node(left, right, value, content)
+
+    def printTree(self) -> None:
+        self.__printTreeRec(self.root)
+
+    def __printTreeRec(self, node: Node) -> None:
+        if node != None:
+            if node.left != None:
+                print("Left: " + str(node.left))
+                print("Right: " + str(node.right))
+            else:
+                print("Input")
+
+            if node.is_copied:
+                print('(Padding)')
+            print("Value: " + str(node.value))
+            print("Content: " + str(node.content))
+            print("")
+            self.__printTreeRec(node.left)
+            self.__printTreeRec(node.right)
+
+    def getRootHash(self) -> str:
+        return self.root.value
+
+def mixmerkletree() -> None:
+    # elems = ["GeeksforGeeks", "A", "Computer", "Science", "Portal", "For", "Geeks"]
+    lastblock = get_last_blockchain_value()
+    lastblocktransactions = lastblock['transactions']
+    print(lastblocktransactions)
+    elems = []
+    # iterating over the ordereddict
+    for trx in lastblocktransactions:
+        for key, value in trx.items():
+            elems.append(key + str(value))
+    print(elems)
+
+    #as there are odd number of inputs, the last input is repeated
+    print("Inputs: ")
+    print(*elems, sep=" | ")
+    print("")
+    mtree = MerkleTree(elems)
+    print("Root Hash: "+mtree.getRootHash()+"\n")
+    mtree.printTree()
+
+# *************************************************
 
 # The reward we give to miners (for creating a new block)
 REWARD = 10
@@ -31,14 +126,7 @@ admin_database = OrderedDict(
 )
 
 # actor is the one who buys and sells the property
-actor_database = OrderedDict(
-    [
-        ('name', 'Abhishek'),
-        ('id', 70),
-        ('properties', []),
-        ('past_properties', [])
-    ]
-)
+actor_database = ''
 
 
 def init_blockchain():
@@ -107,33 +195,34 @@ def load_data():
                     'transactions': []
                 }
                 size = len(block['transactions'])
-                i=1
+                i = 1
                 for tx in block['transactions']:
                     try:
-                        senderUnordered = tx['sender'] 
+                        senderUnordered = tx['sender']
                         sender = OrderedDict(
                             [('name', senderUnordered['name']), ('id', senderUnordered['id'])]
                         )
-                        recipientUnordered = tx['recipient'] 
+                        recipientUnordered = tx['recipient']
                         recipient = OrderedDict(
                             [('name', recipientUnordered['name']), ('id', recipientUnordered['id'])]
                         )
                     except:
                         sender = tx['sender']
                         recipient = tx['recipient']
-                    if(i < size):
-                        print("load data: i, tx ", i, tx['property_address']) 
+                    if (i < size):
+                        print("load data: i, tx ", i, tx['property_address'])
                         """property_address = tx[property_address]"""
                         updated_block['transactions'].append(
                             OrderedDict(
-                                [('sender', sender), ('recipient', recipient), ('amount', tx['amount']), ('property_address', tx['property_address'])])
+                                [('sender', sender), ('recipient', recipient), ('amount', tx['amount']),
+                                 ('property_address', tx['property_address'])])
                         )
                     else:
                         updated_block['transactions'].append(
                             OrderedDict(
                                 [('sender', sender), ('recipient', recipient), ('amount', tx['amount'])])
                         )
-                       
+
                     i = i + 1
                 updated_blockchain.append(updated_block)
             blockchain = updated_blockchain
@@ -143,7 +232,8 @@ def load_data():
             updated_transactions = []
             for tx in un_mined_transactions:
                 updated_transaction = OrderedDict(
-                    [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount', tx['amount']), ('property_address', tx['property_address'])])
+                    [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount', tx['amount']),
+                     ('property_address', tx['property_address'])])
                 updated_transactions.append(updated_transaction)
             un_mined_transactions = updated_transactions
     except IOError:
@@ -162,7 +252,6 @@ def save_data():
 def valid_proof(transactions, last_hash, proof):
     guess = (str(transactions) + str(last_hash) + str(proof)).encode()
     guess_hash = hashlib.sha256(guess).hexdigest()
-    print("Hash of Proof: ", guess_hash)
     return guess_hash[0:2] == '00'
 
 
@@ -192,11 +281,11 @@ def get_balance(participant):
                       for tx in un_mined_transactions if tx['sender'] == participant]
     tx_sender.append(open_tx_sender)
     amount_sent = reduce(lambda tx_sum, tx_amt: tx_sum + sum(tx_amt)
-                         if len(tx_amt) > 0 else tx_sum + 0, tx_sender, 0)
+    if len(tx_amt) > 0 else tx_sum + 0, tx_sender, 0)
     tx_recipient = [[tx['amount'] for tx in block['transactions']
                      if tx['recipient'] == participant] for block in blockchain]
     amount_received = reduce(lambda tx_sum, tx_amt: tx_sum + sum(tx_amt)
-                             if len(tx_amt) > 0 else tx_sum + 0, tx_recipient, 0)
+    if len(tx_amt) > 0 else tx_sum + 0, tx_recipient, 0)
     # Return the total balance
     return amount_received - amount_sent
 
@@ -210,12 +299,12 @@ def get_last_blockchain_value():
 
 def add_participant(sender):
     participant = OrderedDict(
-            [
-                ('name', sender['name']),
-                ('id', sender['id']),
-                ('properties', []),
-                ('past_properties', [])
-            ]
+        [
+            ('name', sender['name']),
+            ('id', sender['id']),
+            ('properties', []),
+            ('past_properties', [])
+        ]
     )
     participants.append(participant)
 
@@ -250,7 +339,8 @@ def get_property_price():
 
 
 def verify_property_actor(user_details, property_details):
-    if property_details['property_actor'] == user_details['name'] and property_details['property_actor_id'] == user_details['id']:
+    if property_details['property_actor'] == user_details['name'] and property_details['property_actor_id'] == \
+            user_details['id']:
         return True
     else:
         print('property actor invalid')
@@ -307,20 +397,20 @@ def add_transaction(recipient, sender, property_details, amount=1.0, user_choice
             print('\n\n transfer_property user_choice', user_choice)
         save_data()
         return True
-        
+
     return False
 
 
 # register property on your name and save it into blockchain (this is a transaction)
 def register_property():
-
     for i in range(len(admin_database['properties'])):
-        print('Land # ',i, '=', admin_database['properties'][i]['property_address'])
-    
+        print('Land # ', i, '=', admin_database['properties'][i]['property_address'])
+
     print('enter the number of property you want to choose')
     user_choice = get_user_choice_int()
     if 0 <= user_choice < len(admin_database['properties']):
-        print('address selected is:\n', admin_database['properties'][user_choice]['property_address'])    #This is not needed
+        print('address selected is:\n',
+              admin_database['properties'][user_choice]['property_address'])  # This is not needed
         property_details = admin_database['properties'][user_choice]
         recipient_details = actor_database
         sender_details = OrderedDict(
@@ -352,7 +442,6 @@ def transfer_property():
     else:
         print('Enter the number of property you want to choose: ', end='')
         user_choice = get_user_choice_int()
-        print('Len of list actor_database[properties] = ', len(actor_database['properties']))
         if 0 <= user_choice < len(actor_database['properties']):
             print('Address selected is: ', actor_database['properties'][user_choice])
             property_details = actor_database['properties'][user_choice]
@@ -432,11 +521,13 @@ def verify_chain():
     for (index, block) in enumerate(blockchain):
         if index == 0:
             continue
-        if block['previous_hash'] != hashlib.sha256(json.dumps(blockchain[index-1], sort_keys=True).encode()).hexdigest():
+        if block['previous_hash'] != hashlib.sha256(
+                json.dumps(blockchain[index - 1], sort_keys=True).encode()).hexdigest():
             print('invalid previous hash at index: ', index)
             return False
         if not valid_proof(block['transactions'][:-1], block['previous_hash'], block['proof']):
-            print('\ninvalid reason block transaction, prev hash, proof\n', block['transactions'][:-1], block['previous_hash'], block['proof'])
+            print('\ninvalid reason block transaction, prev hash, proof\n', block['transactions'][:-1],
+                  block['previous_hash'], block['proof'])
             print('Proof of work is invalid')
             return False
     return True
@@ -447,9 +538,48 @@ def verify_transactions():
     return all([verify_transaction(tx) for tx in un_mined_transactions])
 
 
+def register_new_participant():
+    name = input("Name: ")
+    id = int(input("ID: "))
+    pl = []
+    props = input("Property: ")
+    if len(props) > 0:
+        pl.append(props)
+    ppl = []
+    pprops = input("Past Property: ")
+    if len(pprops) > 0:
+        ppl.append(pprops)
+    # global participants
+    participant = OrderedDict(
+        [
+            ('name', name),
+            ('id', id),
+            ('properties', pl),
+            ('past_properties', ppl)
+        ]
+    )
+    participants.append(participant)
+
+
+def user_login():
+    global actor_database
+    name = input('Enter name: ')
+    id = int(input('Enter ID: '))
+    actor_database = OrderedDict(
+        [
+            ('name', name),
+            ('id', id),
+            ('properties', []),
+            ('past_properties', [])
+        ]
+    )
+    print("User Login Success")
+
+
 def console():
     print('\n+-----------------------------+')
-    print('1: Register your property')
+    print('0: User (Actor) Login')
+    print('1: Register with owned property')
     print('2: Sell your property')  # transfers property to Admin
     print('3: Mine a new block')
     print('4: Check Blockchain Validity')
@@ -458,7 +588,9 @@ def console():
     print('7: Display Blockchain Blocks')
     print('8: Display Participants')
     print('9: Display Actor Details')  # displays actor and his/her properties' data.
-    print('10: Quit')
+    print('10: Merkle Tree')
+    print('11: Register new Participant')
+    print('12: Quit')
 
 
 def init():
@@ -467,12 +599,14 @@ def init():
     init_properties()
 
 
-if __name__ == '__main__':
+def main():
     init()
     while True:
         console()
         user_choice = input('Enter your choice: ')
-        if user_choice == '1':
+        if user_choice == '0':
+            user_login()
+        elif user_choice == '1':
             if register_property():
                 print('Property registered successfully')
             else:
@@ -510,7 +644,15 @@ if __name__ == '__main__':
             print('\nProperty records of Actor: ', actor_database['name'])
             print_user_details()
         elif user_choice == '10':
+            mixmerkletree()
+        elif user_choice == '11':
+            register_new_participant()
+        elif user_choice == '12':
             print('Exiting...')
             break
         else:
             print('Invalid input... Try again!')
+
+
+if __name__ == '__main__':
+    main()
