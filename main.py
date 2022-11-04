@@ -601,6 +601,7 @@ def init():
 
 
 def main():
+    global un_mined_transactions
     init()
     while True:
         console()
